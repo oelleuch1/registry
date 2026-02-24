@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cleanup Functions Report (Detailed)</title>
+    <style>
+      :root {
+        --bg: #f6f8fc;
+        --card: #fff;
+        --ink: #0f172a;
+        --muted: #475569;
+        --border: #d9e2ef;
+        --accent: #0f766e;
+        --code-bg: #0b1020;
+        --code-ink: #dbeafe;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Tahoma, sans-serif;
+        color: var(--ink);
+        background: linear-gradient(180deg, #eef2ff 0%, var(--bg) 50%);
+      }
+      .page { max-width: 1000px; margin: 0 auto; padding: 28px 20px 64px; }
+      h1 { margin: 0 0 8px; font-size: 34px; }
+      .subtitle { margin: 0 0 22px; color: var(--muted); line-height: 1.5; }
+      .sec {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px;
+        margin: 12px 0;
+        break-inside: avoid;
+      }
+      h2 { margin: 0 0 6px; font-size: 20px; color: var(--accent); }
+      p { margin: 0 0 8px; line-height: 1.45; }
+      ul { margin: 0 0 10px 18px; color: var(--muted); }
+      li { margin: 2px 0; }
+      pre {
+        margin: 0;
+        padding: 12px;
+        border-radius: 10px;
+        background: var(--code-bg);
+        color: var(--code-ink);
+        overflow: auto;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      code { font-family: "Cascadia Code", Consolas, monospace; }
+      .footer { margin-top: 22px; color: var(--muted); font-size: 12px; }
+      @page { size: A4; margin: 12mm; }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <h1>Cleanup Functions Report (Detailed)</h1>
+      <p class="subtitle">
+        Each section explains why cleanup is required, what can break if skipped,
+        and includes a detailed TypeScript snapshot using a shared cleanup registry.
+      </p>
+
+      <section class="sec">
+        <h2>Shared Pattern: Cleanup Registry</h2>
+        <p>Use one registry per root owner (screen/component/feature) and execute all cleanup functions on teardown.</p>
+<pre><code>type CleanFn = () =&gt; void;
+const cleanUpMap = new WeakMap&lt;HTMLElement, CleanFn[]&gt;();
+
+export function addCleanup(root: HTMLElement, fn: CleanFn): void {
+  const queue = cleanUpMap.get(root) ?? [];
+  queue.push(fn);
+  cleanUpMap.set(root, queue);
+}
+
+export function runAllCleanups(root: HTMLElement): void {
+  const queue = cleanUpMap.get(root) ?? [];
+  for (const fn of queue) fn();
+  queue.length = 0;
+}</code></pre>
+      </section>
+
+      <section class="sec"><h2>1. setInterval</h2><ul><li>Leak risk: interval keeps running after UI is gone.</li><li>Symptom: duplicated logs, duplicated network calls, CPU usage.</li></ul><pre><code>let tick = 0;
+const intervalId = window.setInterval(() =&gt; {
+  tick += 1;
+  counterEl.textContent = String(tick);
+}, 1000);
+
+addCleanup(root, () =&gt; {
+  window.clearInterval(intervalId);
+});</code></pre></section>
+
+      <section class="sec"><h2>2. setTimeout</h2><ul><li>Timeout may fire after unmount and mutate stale DOM/state.</li></ul><pre><code>const timeoutId = window.setTimeout(() =&gt; {
+  toastEl.classList.add("visible");
+}, 300);
+
+addCleanup(root, () =&gt; {
+  window.clearTimeout(timeoutId);
+});</code></pre></section>
+
+      <section class="sec"><h2>3. Element Event Binding</h2><ul><li>Always keep a stable handler reference.</li><li>Inline functions cannot be removed later.</li></ul><pre><code>const onStartClick = () =&gt; startWorkflow();
+startBtn.addEventListener("click", onStartClick);
+
+addCleanup(root, () =&gt; {
+  startBtn.removeEventListener("click", onStartClick);
+});</code></pre></section>
+
+      <section class="sec"><h2>4. Window Event Binding</h2><ul><li>Global listeners outlive local UI if not removed.</li></ul><pre><code>const onResize = () =&gt; {
+  const compact = window.innerWidth &lt; 900;
+  layoutEl.dataset.compact = String(compact);
+};
+window.addEventListener("resize", onResize);
+
+addCleanup(root, () =&gt; {
+  window.removeEventListener("resize", onResize);
+});</code></pre></section>
+
+      <section class="sec"><h2>5. Document Delegated Listener</h2><ul><li>Useful for dynamic nodes; must still be cleaned.</li></ul><pre><code>const onDocClick = (ev: MouseEvent) =&gt; {
+  const target = ev.target as HTMLElement | null;
+  if (target?.closest("[data-action='close']")) panelEl.classList.add("hidden");
+};
+document.addEventListener("click", onDocClick);
+
+addCleanup(root, () =&gt; {
+  document.removeEventListener("click", onDocClick);
+});</code></pre></section>
+
+      <section class="sec"><h2>6. MutationObserver</h2><ul><li>Observer callbacks continue unless disconnected.</li></ul><pre><code>const mo = new MutationObserver((records) =&gt; {
+  for (const record of records) {
+    console.log("changed nodes:", record.addedNodes.length);
+  }
+});
+mo.observe(listEl, { childList: true, subtree: true });
+
+addCleanup(root, () =&gt; mo.disconnect());</code></pre></section>
+
+      <section class="sec"><h2>7. ResizeObserver</h2><ul><li>Can fire frequently; disconnect on teardown.</li></ul><pre><code>const ro = new ResizeObserver((entries) =&gt; {
+  const width = entries[0]?.contentRect.width ?? 0;
+  titleEl.textContent = `Width: ${width.toFixed(0)}px`;
+});
+ro.observe(panelEl);
+
+addCleanup(root, () =&gt; ro.disconnect());</code></pre></section>
+
+      <section class="sec"><h2>8. IntersectionObserver</h2><ul><li>Lazy-loading/analytics callbacks should stop when feature is removed.</li></ul><pre><code>const io = new IntersectionObserver((entries) =&gt; {
+  for (const entry of entries) {
+    if (entry.isIntersecting) loadPreview();
+  }
+});
+io.observe(imageEl);
+
+addCleanup(root, () =&gt; io.disconnect());</code></pre></section>
+
+      <section class="sec"><h2>9. requestAnimationFrame</h2><ul><li>Pending frame callback should be canceled if animation owner disappears.</li></ul><pre><code>let rafId = 0;
+const animate = () =&gt; {
+  draw();
+  rafId = window.requestAnimationFrame(animate);
+};
+rafId = window.requestAnimationFrame(animate);
+
+addCleanup(root, () =&gt; window.cancelAnimationFrame(rafId));</code></pre></section>
+
+      <section class="sec"><h2>10. requestIdleCallback</h2><ul><li>Idle work can run late; cancel if no longer relevant.</li></ul><pre><code>const idleId = window.requestIdleCallback(() =&gt; {
+  buildSearchIndex();
+});
+
+addCleanup(root, () =&gt; {
+  window.cancelIdleCallback(idleId);
+});</code></pre></section>
+
+      <section class="sec"><h2>11. AbortController (generic async)</h2><ul><li>Stops long async operations and prevents post-unmount side effects.</li></ul><pre><code>const controller = new AbortController();
+runLongTask({ signal: controller.signal })
+  .catch((err) =&gt; {
+    if (err.name !== "AbortError") throw err;
+  });
+
+addCleanup(root, () =&gt; controller.abort());</code></pre></section>
+
+      <section class="sec"><h2>12. fetch with AbortController</h2><ul><li>Abort in-flight request to avoid updating detached UI.</li></ul><pre><code>const controller = new AbortController();
+fetch("/api/registers", { signal: controller.signal })
+  .then((res) =&gt; res.json())
+  .then((rows) =&gt; renderRows(rows))
+  .catch((err) =&gt; {
+    if (err.name !== "AbortError") console.error(err);
+  });
+
+addCleanup(root, () =&gt; controller.abort());</code></pre></section>
+
+      <section class="sec"><h2>13. WebSocket</h2><ul><li>Remove handlers and close socket explicitly.</li></ul><pre><code>const ws = new WebSocket("wss://example.com/realtime");
+const onMessage = (ev: MessageEvent) =&gt; {
+  appendMessage(JSON.parse(String(ev.data)));
+};
+ws.addEventListener("message", onMessage);
+
+addCleanup(root, () =&gt; {
+  ws.removeEventListener("message", onMessage);
+  ws.close();
+});</code></pre></section>
+
+      <section class="sec"><h2>14. EventSource (SSE)</h2><ul><li>SSE remains open until you call <code>close()</code>.</li></ul><pre><code>const sse = new EventSource("/stream/updates");
+const onUpdate = (ev: MessageEvent) =&gt; {
+  updateBadge(ev.data);
+};
+sse.addEventListener("message", onUpdate);
+
+addCleanup(root, () =&gt; {
+  sse.removeEventListener("message", onUpdate);
+  sse.close();
+});</code></pre></section>
+
+      <section class="sec"><h2>15. BroadcastChannel</h2><ul><li>Cross-tab messages should stop after feature teardown.</li></ul><pre><code>const channel = new BroadcastChannel("registers-sync");
+const onChannelMessage = (ev: MessageEvent) =&gt; {
+  mergeState(ev.data);
+};
+channel.addEventListener("message", onChannelMessage);
+
+addCleanup(root, () =&gt; {
+  channel.removeEventListener("message", onChannelMessage);
+  channel.close();
+});</code></pre></section>
+
+      <section class="sec"><h2>16. MediaQueryList listener</h2><ul><li>Responsive/theme watchers are global and persistent if not removed.</li></ul><pre><code>const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
+const onMqlChange = (ev: MediaQueryListEvent) =&gt; {
+  document.body.dataset.reduceMotion = String(ev.matches);
+};
+mql.addEventListener("change", onMqlChange);
+
+addCleanup(root, () =&gt; mql.removeEventListener("change", onMqlChange));</code></pre></section>
+
+      <section class="sec"><h2>17. Geolocation watchPosition</h2><ul><li>Always clear watch IDs to stop tracking callbacks.</li></ul><pre><code>const watchId = navigator.geolocation.watchPosition(
+  (pos) =&gt; {
+    latEl.textContent = pos.coords.latitude.toFixed(4);
+    lngEl.textContent = pos.coords.longitude.toFixed(4);
+  },
+  (err) =&gt; console.error(err)
+);
+
+addCleanup(root, () =&gt; navigator.geolocation.clearWatch(watchId));</code></pre></section>
+
+      <section class="sec"><h2>18. Router/Store subscription</h2><ul><li>If API returns unsubscribe, register it as cleanup immediately.</li></ul><pre><code>const unsubscribe = store.subscribe((nextState) =&gt; {
+  renderState(nextState);
+});
+
+addCleanup(root, () =&gt; unsubscribe());</code></pre></section>
+
+      <section class="sec"><h2>19. Third-party instances</h2><ul><li>Libraries usually expose <code>destroy</code>/<code>dispose</code>.</li></ul><pre><code>const editor = createEditor(editorEl, { language: "ts" });
+editor.setValue("// hello");
+
+addCleanup(root, () =&gt; {
+  editor.destroy();
+});</code></pre></section>
+
+      <section class="sec"><h2>20. Dynamic style/script/node injection</h2><ul><li>Remove injected assets that belong to this feature.</li></ul><pre><code>const styleEl = document.createElement("style");
+styleEl.textContent = ".registers-outline { outline: 2px solid #0ea5e9; }";
+document.head.appendChild(styleEl);
+
+const markerEl = document.createElement("div");
+markerEl.className = "registers-outline";
+document.body.appendChild(markerEl);
+
+addCleanup(root, () =&gt; {
+  styleEl.remove();
+  markerEl.remove();
+});</code></pre></section>
+
+      <p class="footer">Generated for registers-react • docs/cleanup-report.html</p>
+    </main>
+  </body>
+</html>
