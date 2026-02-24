@@ -43,8 +43,6 @@ export function initCard(): void {
 
   const onClose = () => {
     root.classList.add("hidden");
-    runAllCleanups(root);
-    root.dataset.bound = "false";
   };
 
   startBtn.addEventListener("click", onStart);
@@ -55,4 +53,15 @@ export function initCard(): void {
 
   closeBtn.addEventListener("click", onClose);
   addCleanup(root, () => closeBtn.removeEventListener("click", onClose));
+
+
+  const mutationObserver = new MutationObserver(() => {
+    const card = document.querySelector<HTMLElement>("[data-card-root]");
+    if (!card || card.classList.contains('hidden')) {
+      runAllCleanups(root);
+      mutationObserver.disconnect();
+    }
+  });
+
+  mutationObserver.observe(root, { childList: true, subtree: true })
 }
