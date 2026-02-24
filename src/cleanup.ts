@@ -19,4 +19,5 @@ export function runAllCleanups(root: HTMLElement): void {
     cleanFn();
   }
   cleanFns.length = 0;
+  cleanUpMap.delete(root);
 }
