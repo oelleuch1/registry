@@ -1,4 +1,4 @@
-import { addCleanup, runAllCleanups } from '../../cleanup.ts'
+import { addCleanup, watchCleanupOnDetachOrHidden } from '../../cleanup.ts'
 
 export function initCard(): void {
   const root = document.querySelector<HTMLElement>("[data-card-root]");
@@ -54,14 +54,5 @@ export function initCard(): void {
   closeBtn.addEventListener("click", onClose);
   addCleanup(root, () => closeBtn.removeEventListener("click", onClose));
 
-
-  const mutationObserver = new MutationObserver(() => {
-    const card = document.querySelector<HTMLElement>("[data-card-root]");
-    if (!card || card.classList.contains('hidden')) {
-      runAllCleanups(root);
-      mutationObserver.disconnect();
-    }
-  });
-
-  mutationObserver.observe(root, { childList: true, subtree: true })
+  watchCleanupOnDetachOrHidden(root);
 }
