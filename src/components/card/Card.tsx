@@ -2,7 +2,7 @@ export function Card() {
   return (
     <div
       data-card-root
-      className="relative bg-white shadow-xl rounded-2xl p-6 w-80 space-y-4 border"
+      className="card relative bg-white shadow-xl rounded-2xl p-6 w-80 space-y-4 border"
     >
       <button
         type="button"

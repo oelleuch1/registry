@@ -1,8 +1,7 @@
-import { addCleanup, watchCleanupOnDetachOrHidden } from '../../cleanup.ts'
+import { addCleanup } from "../../cleanup.ts";
 
-export function initCard(): void {
-  const root = document.querySelector<HTMLElement>("[data-card-root]");
-  if (!root || root.dataset.bound === "true") {
+export function initCard(root: HTMLElement): void {
+  if (root.dataset.initialized === "true") {
     return;
   }
 
@@ -15,8 +14,9 @@ export function initCard(): void {
     return;
   }
 
-  root.dataset.bound = "true";
-  let count = 0;
+  root.dataset.initialized = "true";
+
+  let count = Number(countEl.textContent ?? "0") || 0;
   let intervalId: number | null = null;
 
   const onStart = () => {
@@ -30,12 +30,6 @@ export function initCard(): void {
       console.log("Timer is:", count);
     }, 1000);
   };
-  addCleanup(root, () => {
-    if (intervalId !== null) {
-      window.clearInterval(intervalId);
-      intervalId = null;
-    }
-  });
 
   const onClick = () => {
     alert("Button clicked!");
@@ -54,5 +48,14 @@ export function initCard(): void {
   closeBtn.addEventListener("click", onClose);
   addCleanup(root, () => closeBtn.removeEventListener("click", onClose));
 
-  watchCleanupOnDetachOrHidden(root);
+  addCleanup(root, () => {
+    if (intervalId !== null) {
+      window.clearInterval(intervalId);
+      intervalId = null;
+    }
+  });
+
+  addCleanup(root, () => {
+    delete root.dataset.initialized;
+  });
 }
