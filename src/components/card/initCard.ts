@@ -1,8 +1,7 @@
+import { addCleanup, runAllCleanups } from '../../cleanup.ts'
+
 export function initCard(): void {
   const root = document.querySelector<HTMLElement>("[data-card-root]");
-
-  console.log(root);
-
   if (!root || root.dataset.bound === "true") {
     return;
   }
@@ -17,22 +16,43 @@ export function initCard(): void {
   }
 
   root.dataset.bound = "true";
-
   let count = 0;
+  let intervalId: number | null = null;
 
-  startBtn.addEventListener("click", () => {
-    window.setInterval(() => {
+  const onStart = () => {
+    if (intervalId !== null) {
+      return;
+    }
+
+    intervalId = window.setInterval(() => {
       count += 1;
       countEl.textContent = String(count);
       console.log("Timer is:", count);
     }, 1000);
+  };
+  addCleanup(root, () => {
+    if (intervalId !== null) {
+      window.clearInterval(intervalId);
+      intervalId = null;
+    }
   });
 
-  clickBtn.addEventListener("click", () => {
+  const onClick = () => {
     alert("Button clicked!");
-  });
+  };
 
-  closeBtn.addEventListener("click", () => {
+  const onClose = () => {
     root.classList.add("hidden");
-  });
+    runAllCleanups(root);
+    root.dataset.bound = "false";
+  };
+
+  startBtn.addEventListener("click", onStart);
+  addCleanup(root, () => startBtn.removeEventListener("click", onStart));
+
+  clickBtn.addEventListener("click", onClick);
+  addCleanup(root, () => clickBtn.removeEventListener("click", onClick));
+
+  closeBtn.addEventListener("click", onClose);
+  addCleanup(root, () => closeBtn.removeEventListener("click", onClose));
 }
