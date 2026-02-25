@@ -1,8 +1,11 @@
 import { addCleanup, runAllCleanups } from '../../cleanup.ts'
 
+// first time for exec
+
 export function initCard(): void {
   const root = document.querySelector<HTMLElement>("[data-card-root]");
-  if (!root || root.dataset.bound === "true") {
+
+  if (!root || root.dataset.isExecuted === "true") {
     return;
   }
 
@@ -15,15 +18,11 @@ export function initCard(): void {
     return;
   }
 
-  root.dataset.bound = "true";
+  root.dataset.isExecuted = "true";
   let count = 0;
   let intervalId: number | null = null;
 
   const onStart = () => {
-    if (intervalId !== null) {
-      return;
-    }
-
     intervalId = window.setInterval(() => {
       count += 1;
       countEl.textContent = String(count);
