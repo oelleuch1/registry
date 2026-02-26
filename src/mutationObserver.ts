@@ -25,7 +25,8 @@ export function exampleWatchCardHidden(): void {
     return;
   }
 
-  const observer = new MutationObserver(() => {
+  const observer = new MutationObserver((mutations) => {
+    console.log({ mutations })
     if (card.classList.contains("hidden")) {
       console.log("Card is hidden. Cleanups should run now.");
     }
@@ -34,6 +35,8 @@ export function exampleWatchCardHidden(): void {
   observer.observe(card, {
     attributes: true,
     attributeFilter: ["class"],
+    childList: true,
+    subtree: true,
   });
 }
 
@@ -60,30 +63,17 @@ export function exampleWatchNavigation(): void {
 }
 
 // Example 3: Track old values for attributes and text changes.
-export function exampleWatchOldValues(): void {
+export function exampleTimerWatch(): void {
   const cardCount = document.querySelector<HTMLElement>("[data-card-count]");
   if (!cardCount) {
     return;
   }
 
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      if (mutation.type === "characterData") {
-        console.log("Old text value:", mutation.oldValue ?? "(none)");
-      }
-    }
+  const observer = new MutationObserver(() => {
+    console.log("Timer is changed");
   });
 
-  if (!cardCount.firstChild) {
-    cardCount.textContent = "0";
-  }
-
-  const textNode = cardCount.firstChild;
-  if (!textNode) {
-    return;
-  }
-
-  observer.observe(textNode, {
+  observer.observe(cardCount, {
     characterData: true,
     characterDataOldValue: true,
   });
@@ -92,7 +82,7 @@ export function exampleWatchOldValues(): void {
 export function runMutationObserverExamples(): void {
   exampleWatchNavigation();
   exampleWatchCardHidden();
-  exampleWatchOldValues();
+  exampleTimerWatch();
 }
 
 /*
