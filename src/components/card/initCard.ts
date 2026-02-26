@@ -1,4 +1,5 @@
-import { addCleanup, watchCleanupOnDetachOrHidden } from '../../cleanup.ts'
+import { addCleanup } from '../../cleanup.ts'
+import { watchCleanupOnDetachOrHidden } from "../../watchers.ts";
 
 export function initCard(): void {
   const root = document.querySelector<HTMLElement>("[data-card-root]");

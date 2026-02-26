@@ -14,9 +14,9 @@ export function Card() {
       </button>
       <h2 className="text-xl font-bold text-gray-800">Card</h2>
 
-      <p className="text-gray-600">
+      <h3 className="text-gray-600">
         Timer: <span data-card-count>0</span>
-      </p>
+      </h3>
 
       <button
         type="button"
