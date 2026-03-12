@@ -1,14 +1,29 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "./components/card/Card.tsx";
 
 function App() {
   const [page, setPage] = useState<"first" | "second">("first");
+  const [changeCount, setChangeCount] = useState(0);
+
+  useEffect(() => {
+    const handler = () => setChangeCount((c) => c + 1);
+    window.addEventListener("nav-page-changed", handler);
+    return () => window.removeEventListener("nav-page-changed", handler);
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <nav className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center gap-4 px-6 py-4">
-          <div className="text-lg font-semibold tracking-tight">Registers</div>
+          <div className="text-lg font-semibold tracking-tight">
+            Registers
+          </div>
+          <span
+            className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-900 px-2 text-xs font-medium text-white"
+            data-nav-change-count
+          >
+            {changeCount}
+          </span>
           <div className="ml-auto flex gap-2">
             <button
               type="button"
@@ -37,7 +52,7 @@ function App() {
       </nav>
 
       <main className="mx-auto flex max-w-5xl flex-col gap-6 px-6 py-10">
-        { page === "first" ? (
+        {page === "first" ? (
           <>
             <h1 className="text-2xl font-semibold">First Page</h1>
             <Card />
@@ -46,14 +61,14 @@ function App() {
           <>
             <h1 className="text-2xl font-semibold">Second Page</h1>
             <p className="max-w-2xl text-slate-600">
-              This is the second page. Use the navigation above to switch back to
-              the first page and see the Card component.
+              This is the second page. Use the navigation above to switch back
+              to the first page and see the Card component.
             </p>
           </>
         )}
       </main>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

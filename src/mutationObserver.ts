@@ -26,7 +26,7 @@ export function exampleWatchCardHidden(): void {
   }
 
   const observer = new MutationObserver((mutations) => {
-    console.log({ mutations })
+    console.log({ mutations });
     if (card.classList.contains("hidden")) {
       console.log("Card is hidden. Cleanups should run now.");
     }
@@ -45,12 +45,12 @@ export function exampleWatchNavigation(): void {
   const navButtons = document.querySelectorAll<HTMLButtonElement>("nav button");
 
   const observer = new MutationObserver(() => {
-    const activeButton = Array.from(navButtons).find((button) =>
-      button.classList.contains("bg-slate-900")
+    const navButton = Array.from(navButtons).find((button) =>
+      button.classList.contains("bg-slate-900"),
     );
 
-    if (activeButton) {
-      console.log("Active page:", activeButton.textContent?.trim());
+    if (navButton) {
+      console.log("Active page:", navButton.textContent?.trim());
     }
   });
 
@@ -79,13 +79,47 @@ export function exampleTimerWatch(): void {
   });
 }
 
-export function runMutationObserverExamples(): void {
-  exampleWatchNavigation();
-  exampleWatchCardHidden();
-  exampleTimerWatch();
-}
-
 /*
 Exercise: Add a small badge element next to the nav title that shows how many times the
    active page changed (increment on each class change).
    */
+
+export function exampleChangeBadge(): void {
+  const navButtons = document.querySelectorAll<HTMLButtonElement>("nav button");
+
+  if (!navButtons.length) {
+    return;
+  }
+
+  let previousActivePage: string | null = null;
+
+  const observer = new MutationObserver(() => {
+    const navButton = Array.from(navButtons).find((button) =>
+      button.classList.contains("bg-slate-900"),
+    );
+
+    if (navButton) {
+      const currentPage = navButton.textContent?.trim() ?? "";
+      if (currentPage !== previousActivePage) {
+        if (previousActivePage !== null) {
+          window.dispatchEvent(new CustomEvent("nav-page-changed"));
+        }
+        previousActivePage = currentPage;
+      }
+    }
+  });
+
+  for (const button of navButtons) {
+    observer.observe(button, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+  }
+}
+
+export function runMutationObserverExamples(): void {
+  exampleWatchNavigation();
+  exampleWatchCardHidden();
+  exampleTimerWatch();
+  exampleChangeBadge();
+}
