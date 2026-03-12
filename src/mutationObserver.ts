@@ -91,7 +91,7 @@ export function exampleChangeBadge(): void {
     return;
   }
 
-  let previousActivePage: string | null = null;
+  let previousActivePage: string = navButtons[0].textContent;
 
   const observer = new MutationObserver(() => {
     console.log("observer");
@@ -102,14 +102,13 @@ export function exampleChangeBadge(): void {
     if (navButton) {
       const currentPage = navButton.textContent?.trim() ?? "";
       console.log("currentPage", currentPage);
+      console.log("previousActivePage", previousActivePage);
+
       if (currentPage !== previousActivePage) {
         previousActivePage = currentPage;
-        if (previousActivePage !== null) {
-          window.dispatchEvent(new CustomEvent("nav-page-changed"));
-          console.log("dispatch");
-        }
+        window.dispatchEvent(new CustomEvent("nav-page-changed"));
+        console.log("dispatch");
       }
-      console.log("previousActivePage", previousActivePage);
     }
   });
 
