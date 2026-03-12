@@ -41,26 +41,26 @@ export function exampleWatchCardHidden(): void {
 }
 
 // Example 2: Watch navigation button class changes (page switch).
-export function exampleWatchNavigation(): void {
-  const navButtons = document.querySelectorAll<HTMLButtonElement>("nav button");
+// export function exampleWatchNavigation(): void {
+//   const navButtons = document.querySelectorAll<HTMLButtonElement>("nav button");
 
-  const observer = new MutationObserver(() => {
-    const navButton = Array.from(navButtons).find((button) =>
-      button.classList.contains("bg-slate-900"),
-    );
+//   const observer = new MutationObserver(() => {
+//     const navButton = Array.from(navButtons).find((button) =>
+//       button.classList.contains("bg-slate-900"),
+//     );
 
-    if (navButton) {
-      console.log("Active page:", navButton.textContent?.trim());
-    }
-  });
+//     if (navButton) {
+//       console.log("Active page:", navButton.textContent?.trim());
+//     }
+//   });
 
-  for (const button of navButtons) {
-    observer.observe(button, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-  }
-}
+//   for (const button of navButtons) {
+//     observer.observe(button, {
+//       attributes: true,
+//       attributeFilter: ["class"],
+//     });
+//   }
+// }
 
 // Example 3: Track old values for attributes and text changes.
 export function exampleTimerWatch(): void {
@@ -94,18 +94,22 @@ export function exampleChangeBadge(): void {
   let previousActivePage: string | null = null;
 
   const observer = new MutationObserver(() => {
+    console.log("observer");
     const navButton = Array.from(navButtons).find((button) =>
       button.classList.contains("bg-slate-900"),
     );
 
     if (navButton) {
       const currentPage = navButton.textContent?.trim() ?? "";
+      console.log("currentPage", currentPage);
       if (currentPage !== previousActivePage) {
+        previousActivePage = currentPage;
         if (previousActivePage !== null) {
           window.dispatchEvent(new CustomEvent("nav-page-changed"));
+          console.log("dispatch");
         }
-        previousActivePage = currentPage;
       }
+      console.log("previousActivePage", previousActivePage);
     }
   });
 
@@ -118,7 +122,7 @@ export function exampleChangeBadge(): void {
 }
 
 export function runMutationObserverExamples(): void {
-  exampleWatchNavigation();
+  // exampleWatchNavigation();
   exampleWatchCardHidden();
   exampleTimerWatch();
   exampleChangeBadge();
